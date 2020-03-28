@@ -15,6 +15,7 @@ import (
 const (
 	// TODO: fetch from go release
 	latest = "1.14"
+	goMod = "go.mod"
 )
 
 type file struct {
@@ -58,6 +59,10 @@ func (w Worker) bump(wg *sync.WaitGroup) {
 		haltOnError(err)
 	}
 
+	if err := filepath.Walk(w.path, w.visitGitHub); err != nil {
+		haltOnError(err)
+	}
+
 	wg.Done()
 }
 
@@ -95,13 +100,47 @@ func (w *Worker) visit(path string, fi os.FileInfo, err error) error {
 	return nil
 }
 
+// TODO: optimize so only visits the .github folder
+func (w *Worker) visitGitHub(path string, fi os.FileInfo, err error) error {
+	if err != nil {
+		return err
+	}
+
+	if fi.IsDir() && fi.Name() != "vendor" {
+		return filepath.SkipDir
+	}
+
+	if fi.IsDir() && fi.Name() == ".git" {
+		return filepath.SkipDir
+	}
+
+	if fi.IsDir() {
+		return nil
+	}
+
+	fmt.Println(fi.Name())
+	matched, err := filepath.Match("*", fi.Name())
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	if matched {
+		if err := w.editFile(path); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (w *Worker) editFile(path string) error {
 	read, err := ioutil.ReadFile(path)
 	if err != nil {
 		return err
 	}
 
-	if strings.Contains(path, "go.mod") {
+	if strings.Contains(path, goMod) {
 		w.storeCurrentGoVersion(read)
 	}
 
