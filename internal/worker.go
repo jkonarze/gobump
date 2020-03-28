@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 )
 
@@ -19,11 +20,11 @@ const (
 type file struct {
 	path string
 	name string
-	currentGo string
 }
 
 type Worker struct {
 	path       string
+	currentGo string
 	files      []file
 }
 
@@ -100,8 +101,11 @@ func (w *Worker) editFile(path string) error {
 		return err
 	}
 
-	// TODO: if go.mod get currentGo version and store for .github edits
-	replaced := bytes.Replace(read, []byte("1.13"), []byte(latest), -1)
+	if strings.Contains(path, "go.mod") {
+		w.storeCurrentGoVersion(read)
+	}
+
+	replaced := bytes.Replace(read, []byte(w.currentGo), []byte(latest), -1)
 	err = ioutil.WriteFile(path, replaced, 0)
 
 	if err != nil {
@@ -111,12 +115,18 @@ func (w *Worker) editFile(path string) error {
 	return nil
 }
 
+func (w *Worker) storeCurrentGoVersion(read []byte) {
+	// Find `go 1.13` index to extract go version
+	index := bytes.Index(read, []byte("go "))
+	if index != -1 {
+		index = index + 3
+		// TODO: leave naive approach
+		w.currentGo = bytes.NewBuffer(read[index : index+4]).String()
+	}
+}
+
 func (w *Worker) vendor() error {
-	cmd := exec.Command(
-		"go",
-		"mod",
-		"vendor",
-	)
+	cmd := exec.Command("go", "mod", "vendor")
 	cmd.Dir = filepath.Join(w.path)
 
 	if err := cmd.Run(); err != nil {
