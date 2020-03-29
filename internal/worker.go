@@ -14,9 +14,7 @@ import (
 )
 
 const (
-	// TODO: fetch from go release
-	latest = "1.14"
-	goMod  = "go.mod"
+	goMod = "go.mod"
 )
 
 type controller interface {
@@ -32,41 +30,67 @@ type file struct {
 
 type Worker struct {
 	path        string
+	version     string
 	currentGo   string
 	files       []file
 	vController controller
 }
 
-func NewWorker(url string) Worker {
-	cCtr := NewWorkerVC(url)
+func NewWorker(path, version string) Worker {
 	return Worker{
-		path:        url,
-		vController: &cCtr,
+		path:        path,
+		version:     version,
 	}
 }
 
 func (w Worker) Init() {
 	var wg sync.WaitGroup
 	wp := workerpool.New(30)
+	repos, err := w.repos()
 
-	for i := 0; i < 1; i++ {
+	if err != nil {
+		haltOnError(err)
+	}
+
+	for _, v := range repos{
+		path := filepath.Join(w.path, v)
+		fmt.Println(path)
 		wg.Add(1)
 		wp.Submit(func() {
-			w.bump(&wg)
+			w.bump(&wg, path)
+
 		})
 	}
 
 	wg.Wait()
+	wp.Stop()
+}
+
+func (w Worker) repos() ([]string, error) {
+	var repos []string
+	files, err := ioutil.ReadDir(w.path)
+	if err != nil {
+		return repos, err
+	}
+	for _, file := range files {
+		if file.IsDir() {
+			repos = append(repos, file.Name())
+		}
+	}
+	fmt.Println("counting files ", len(repos))
+	return repos, nil
 }
 
 // TODO: check if hub installed
 // TODO: compare values of old vs new go version
-func (w Worker) bump(wg *sync.WaitGroup) {
+func (w Worker) bump(wg *sync.WaitGroup, path string) {
+	vCli := NewWorkerVC(path)
+	w.vController = &vCli
 	//if err := w.vController.Prepare(); err != nil {
 	//	haltOnError(err)
 	//}
 
-	if err := filepath.Walk(w.path, w.visit); err != nil {
+	if err := filepath.Walk(path, w.visit); err != nil {
 		haltOnError(err)
 	}
 
@@ -75,7 +99,7 @@ func (w Worker) bump(wg *sync.WaitGroup) {
 		return
 	}
 
-	if err := w.vendor(); err != nil {
+	if err := w.vendor(path); err != nil {
 		haltOnError(err)
 	}
 
@@ -157,7 +181,7 @@ func (w *Worker) editFile(path string) error {
 		w.storeCurrentGoVersion(read)
 	}
 
-	replaced := bytes.Replace(read, []byte(w.currentGo), []byte(latest), -1)
+	replaced := bytes.Replace(read, []byte(w.currentGo), []byte(w.version), -1)
 	err = ioutil.WriteFile(path, replaced, 0)
 
 	if err != nil {
@@ -177,9 +201,9 @@ func (w *Worker) storeCurrentGoVersion(read []byte) {
 	}
 }
 
-func (w *Worker) vendor() error {
+func (w *Worker) vendor(path string) error {
 	cmd := exec.Command("go", "mod", "vendor")
-	cmd.Dir = filepath.Join(w.path)
+	cmd.Dir = filepath.Join(path)
 
 	if err := cmd.Run(); err != nil {
 		return err

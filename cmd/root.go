@@ -2,16 +2,19 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/spf13/cobra"
 	"os"
+
+	"github.com/spf13/cobra"
 )
 
 var (
-	path string
+	path    string
+	version string
 )
 
 func Execute() {
-	cmdBump.PersistentFlags().StringVarP(&path, "path", "p", "", "path to your repo")
+	cmdBump.PersistentFlags().StringVarP(&path, "path", "p", "", "path directory of your repos")
+	cmdBump.PersistentFlags().StringVarP(&version, "version", "v", "1.14", "desire go version")
 
 	var rootCmd = &cobra.Command{Use: "gobump"}
 	rootCmd.AddCommand(cmdBump)

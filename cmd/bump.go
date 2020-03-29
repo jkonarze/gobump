@@ -11,7 +11,7 @@ var cmdBump = &cobra.Command{
 	Long: `An easy way to update the go lang version for the project in the given path`,
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		svc := internal.NewWorker(args[0])
+		svc := internal.NewWorker(args[0], version)
 		svc.Init()
 	},
 }
