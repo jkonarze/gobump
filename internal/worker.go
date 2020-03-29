@@ -20,7 +20,9 @@ const (
 )
 
 type controller interface {
-	submit() error
+	Submit() error
+	Prepare() error
+	Cleanup() error
 }
 
 type file struct {
@@ -39,7 +41,7 @@ func NewWorker(url string) Worker {
 	cCtr := NewWorkerVC(url)
 	return Worker{
 		path:        url,
-		vController: cCtr,
+		vController: &cCtr,
 	}
 }
 
@@ -57,8 +59,13 @@ func (w Worker) Init() {
 	wg.Wait()
 }
 
+// TODO: check if hub installed
+// TODO: compare values of old vs new go version
 func (w Worker) bump(wg *sync.WaitGroup) {
-	// TODO: compare values of old vs new go version
+	//if err := w.vController.Prepare(); err != nil {
+	//	haltOnError(err)
+	//}
+
 	if err := filepath.Walk(w.path, w.visit); err != nil {
 		haltOnError(err)
 	}
@@ -77,10 +84,15 @@ func (w Worker) bump(wg *sync.WaitGroup) {
 	}
 
 	// TODO: check if hub installed
-	if err := w.vController.submit(); err != nil {
+	if err := w.vController.Submit(); err != nil {
 		fmt.Println("submit")
 		haltOnError(err)
 	}
+
+	//if err := w.vController.Cleanup(); err != nil {
+	//	fmt.Println("cleanup")
+	//	haltOnError(err)
+	//}
 
 	wg.Done()
 }
