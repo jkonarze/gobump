@@ -19,20 +19,27 @@ const (
 	goMod  = "go.mod"
 )
 
+type controller interface {
+	submit() error
+}
+
 type file struct {
 	path string
 	name string
 }
 
 type Worker struct {
-	path      string
-	currentGo string
-	files     []file
+	path        string
+	currentGo   string
+	files       []file
+	vController controller
 }
 
 func NewWorker(url string) Worker {
+	cCtr := NewWorkerVC(url)
 	return Worker{
-		path: url,
+		path:        url,
+		vController: cCtr,
 	}
 }
 
@@ -70,7 +77,7 @@ func (w Worker) bump(wg *sync.WaitGroup) {
 	}
 
 	// TODO: check if hub installed
-	if err := w.submit(); err != nil {
+	if err := w.vController.submit(); err != nil {
 		fmt.Println("submit")
 		haltOnError(err)
 	}
@@ -166,75 +173,6 @@ func (w *Worker) vendor() error {
 		return err
 	}
 
-	return nil
-}
-
-func (w *Worker) submit() error {
-	if err := w.addChanges(); err != nil {
-		fmt.Println("addChanges")
-		return err
-	}
-
-	if err := w.branchOut(); err != nil {
-		fmt.Println("branchOut")
-		return err
-	}
-
-	if err := w.commit(); err != nil {
-		fmt.Println("commit")
-		return err
-	}
-
-	if err := w.pr(); err != nil {
-		fmt.Println("pr")
-		return err
-	}
-
-	return nil
-}
-
-func (w *Worker) branchOut() error {
-	cmd := exec.Command("hub", "checkout", "-b", "nextGo")
-	cmd.Dir = filepath.Join(w.path)
-
-	if err := cmd.Run(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (w *Worker) commit() error {
-	cmd := exec.Command("hub", "commit", `-am "bump go version with go-bump"`)
-	cmd.Dir = filepath.Join(w.path)
-
-	if err := cmd.Run(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (w *Worker) pr() error {
-	cmd := exec.Command("hub",
-		"pull-request",
-		"-p",
-		"-l minor",
-		"--no-edit",
-	)
-	cmd.Dir = filepath.Join(w.path)
-
-	if err := cmd.Run(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (w *Worker) addChanges() error {
-	cmd := exec.Command("hub", "add", ".")
-	cmd.Dir = filepath.Join(w.path)
-
-	if err := cmd.Run(); err != nil {
-		return err
-	}
 	return nil
 }
 
