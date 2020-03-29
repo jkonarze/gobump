@@ -110,7 +110,7 @@ func (w *WorkerVC) Submit() error {
 
 func (w *WorkerVC) branchOut() error {
 	// TODO: issue when passing constant as a branch?
-	cmd := exec.Command("hub", "checkout", "-b", "bumpBranch")
+	cmd := exec.Command("hub", "checkout", "-b", "next-Go")
 	cmd.Dir = filepath.Join(w.path)
 
 	if err := cmd.Run(); err != nil {
@@ -136,6 +136,8 @@ func (w *WorkerVC) pr() error {
 		"-l",
 		"minor",
 		"--no-edit",
+		"-m",
+		"update go version",
 	)
 	cmd.Dir = filepath.Join(w.path)
 

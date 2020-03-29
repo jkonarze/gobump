@@ -13,7 +13,7 @@ var (
 )
 
 func Execute() {
-	cmdBump.PersistentFlags().StringVarP(&path, "path", "p", "", "path directory of your repos")
+	cmdBump.PersistentFlags().StringVarP(&path, "path", "p", "", "path to go repos")
 	cmdBump.PersistentFlags().StringVarP(&version, "version", "v", "1.14", "desire go version")
 
 	var rootCmd = &cobra.Command{Use: "gobump"}
