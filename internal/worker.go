@@ -8,9 +8,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"sync"
-
-	"github.com/gammazero/workerpool"
 )
 
 const (
@@ -54,8 +51,26 @@ func NewWorker(path, version, builder, buildImage, runImage string) Worker {
 }
 
 func (w *Worker) Init() {
-	var wg sync.WaitGroup
-	wp := workerpool.New(30)
+	//var wg sync.WaitGroup
+	//wp := workerpool.New(30)
+	//repos, err := w.repos()
+	//
+	//if err != nil {
+	//	w.haltOnError(err, "init")
+	//}
+	//
+	//for _, v := range repos {
+	//	path := filepath.Join(w.path, v)
+	//	wg.Add(1)
+	//	wp.Submit(func() {
+	//		w.bump(&wg, path)
+	//
+	//	})
+	//}
+	//
+	//wg.Wait()
+	//wp.Stop()
+
 	repos, err := w.repos()
 
 	if err != nil {
@@ -64,15 +79,8 @@ func (w *Worker) Init() {
 
 	for _, v := range repos {
 		path := filepath.Join(w.path, v)
-		wg.Add(1)
-		wp.Submit(func() {
-			w.bump(&wg, path)
-
-		})
+		w.bump(path)
 	}
-
-	wg.Wait()
-	wp.Stop()
 }
 
 func (w *Worker) repos() ([]string, error) {
@@ -91,7 +99,7 @@ func (w *Worker) repos() ([]string, error) {
 
 // TODO: check if hub installed
 // TODO: compare values of old vs new go version
-func (w *Worker) bump(wg *sync.WaitGroup, path string) {
+func (w *Worker) bump(path string) {
 	vCli := NewWorkerVC(path)
 	w.vController = &vCli
 	if err := w.vController.Prepare(); err != nil {
@@ -108,7 +116,6 @@ func (w *Worker) bump(wg *sync.WaitGroup, path string) {
 		return
 	}
 
-	fmt.Printf("🚧 vendoring on %v\n", path)
 	if err := w.vendor(path); err != nil {
 		w.haltOnError(err, "vendor")
 	}
@@ -125,8 +132,6 @@ func (w *Worker) bump(wg *sync.WaitGroup, path string) {
 	if err := w.vController.Cleanup(); err != nil {
 		w.haltOnError(err, "cleanup")
 	}
-
-	wg.Done()
 }
 
 func (w *Worker) visit(path string, fi os.FileInfo, err error) error {
@@ -310,14 +315,11 @@ func (w *Worker) updateGoRunImage(path string) error {
 }
 
 func (w *Worker) vendor(path string) error {
-	fmt.Printf("vendor path %v\n", w.path)
-
 	cmd := exec.Command("go", "mod", "vendor")
 	cmd.Dir = filepath.Join(path)
 
 
 	if err := cmd.Run(); err != nil {
-		fmt.Printf("err vendor path %v\n", w.path)
 		return err
 	}
 

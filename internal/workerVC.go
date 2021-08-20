@@ -70,7 +70,7 @@ func (w *WorkerVC) checkout(branch string) error {
 	cmd.Dir = filepath.Join(w.path)
 
 	if err := cmd.Run(); err != nil {
-		return err
+		return fmt.Errorf("err %v for branch %v", err, branch)
 	}
 	return nil
 }
@@ -90,22 +90,18 @@ func (w *WorkerVC) Submit() error {
 	if err := w.addChanges(); err != nil {
 		return err
 	}
-	fmt.Println("post add")
 
 	if err := w.branchOut(); err != nil {
 		return err
 	}
-	fmt.Println("post branch out")
 
 	if err := w.commit(); err != nil {
-		fmt.Println("post commit")
 		return err
 	}
 
 	if err := w.pr(); err != nil {
 		return err
 	}
-	fmt.Println("post pr")
 
 	fmt.Printf("✅ done  %v\n", w.path)
 	return nil
@@ -163,14 +159,17 @@ func (w *WorkerVC) addChanges() error {
 func (w *WorkerVC) Cleanup() error {
 	fmt.Printf("🧹 cleanup %v\n", w.path)
 	if err := w.checkout(w.originalB); err != nil {
+		fmt.Printf("🚨 err checkout %v\n", err)
 		return err
 	}
 
 	if err := w.stashPop(); err != nil {
+		fmt.Printf("🚨 err stashpop %v\n", err)
 		return err
 	}
 
 	if err := w.removeBranch(); err != nil {
+		fmt.Printf("🚨 err removebranch %v\n", err)
 		return err
 	}
 
