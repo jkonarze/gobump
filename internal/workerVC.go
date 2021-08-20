@@ -23,6 +23,7 @@ func NewWorkerVC(path string) WorkerVC {
 }
 
 func (w *WorkerVC) Prepare() error {
+	fmt.Printf("🛠 preparing %v\n", w.path)
 	if err := w.currentBranch(); err != nil {
 		return err
 	}
@@ -85,26 +86,28 @@ func (w *WorkerVC) pull() error {
 }
 
 func (w *WorkerVC) Submit() error {
+	fmt.Printf("🚀 submitting %v\n", w.path)
 	if err := w.addChanges(); err != nil {
-		fmt.Println("add", err)
 		return err
 	}
+	fmt.Println("post add")
 
 	if err := w.branchOut(); err != nil {
-		fmt.Println("branch out ", err)
 		return err
 	}
+	fmt.Println("post branch out")
 
 	if err := w.commit(); err != nil {
-		fmt.Println("commit ", err)
+		fmt.Println("post commit")
 		return err
 	}
 
 	if err := w.pr(); err != nil {
-		fmt.Println("pr ", err)
 		return err
 	}
+	fmt.Println("post pr")
 
+	fmt.Printf("✅ done  %v\n", w.path)
 	return nil
 }
 
@@ -158,18 +161,16 @@ func (w *WorkerVC) addChanges() error {
 }
 
 func (w *WorkerVC) Cleanup() error {
+	fmt.Printf("🧹 cleanup %v\n", w.path)
 	if err := w.checkout(w.originalB); err != nil {
-		fmt.Println("checkout")
 		return err
 	}
 
 	if err := w.stashPop(); err != nil {
-		fmt.Println("stash pop")
 		return err
 	}
 
 	if err := w.removeBranch(); err != nil {
-		fmt.Println("remove branch")
 		return err
 	}
 
