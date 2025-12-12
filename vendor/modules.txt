@@ -5,8 +5,8 @@ github.com/gammazero/deque
 github.com/gammazero/workerpool
 # github.com/inconshreveable/mousetrap v1.1.0
 github.com/inconshreveable/mousetrap
-# github.com/spf13/cobra v1.9.1
+# github.com/spf13/cobra v1.10.1
 ## explicit
 github.com/spf13/cobra
-# github.com/spf13/pflag v1.0.6
+# github.com/spf13/pflag v1.0.9
 github.com/spf13/pflag
